@@ -1,6 +1,6 @@
 # TKUtalk
 
-These materials are used to address a talk in SatuRday invited by TKU.
+These materials are used to address a talk in 2020 SatRday Taiwan invited by TKU.
 
 * OS: Windows 10 
 * R version: 3.6.2
