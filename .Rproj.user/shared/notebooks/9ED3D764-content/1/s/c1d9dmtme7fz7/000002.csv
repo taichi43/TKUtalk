@@ -1,0 +1,4 @@
+"0","library(rgeos)"
+"0","countytaiwan<- gUnaryUnion(taiwan,"
+"0","  taiwan@data$COUNTYNAME)"
+"0","plot(countytaiwan)"

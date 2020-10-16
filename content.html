@@ -1,0 +1,714 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Paper, Server, and Service with R</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Taichi Wang" />
+    <link href="content_files/remark-css-0.0.1/default.css" rel="stylesheet" />
+    <link href="content_files/remark-css-0.0.1/metropolis.css" rel="stylesheet" />
+    <link href="content_files/remark-css-0.0.1/metropolis-fonts.css" rel="stylesheet" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# Paper, Server, and Service with R
+## <span class="citation">@TKU</span> 2020/10/17
+### Taichi Wang
+
+---
+
+
+
+
+
+class: center, middle
+
+&lt;font size= "10"&gt;
+
+**Spatial Analysis**
+
+---
+
+# Taiwan Shape file
+
+一張地圖是由許多的polygons組成，正常狀況不會要求自己畫完整張地圖，
+於是就有很多公開免費的圖層可以下載，其中一種常用的圖層檔案格式
+就是shape file(.shp).
+
+鄉鎮市區界線(TWD97經緯度)  
+[http://data.gov.tw/node/7441](http://data.gov.tw/node/7441)
+
+
+Read shape file with R
+
+
+```r
+library(maptools)
+library(rgeos)
+taiwan &lt;- readShapeSpatial(
+  "./data/taiwantownshp/TOWN_MOI_1060831.shp" , 
+  proj4string = CRS("+proj=longlat +datum=WGS84"))
+```
+
+---
+
+
+```r
+plot(taiwan)
+```
+
+&lt;img src="content_files/figure-html/unnamed-chunk-2-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Data foramt
+
+
+```r
+class(taiwan)
+```
+
+```
+## [1] "SpatialPolygonsDataFrame"
+## attr(,"package")
+## [1] "sp"
+```
+
+```r
+mode(taiwan)
+```
+
+```
+## [1] "S4"
+```
+
+---
+
+# Deal with Encoding
+
+If you use Windows,...
+
+```r
+taiwan@data$COUNTYNAME=iconv(
+  taiwan@data$COUNTYNAME,"UTF-8")
+taiwan@data$TOWNNAME=iconv(
+ taiwan@data$TOWNNAME,"UTF-8")
+head(taiwan@data)
+```
+
+```
+##   TOWNID TOWNCODE COUNTYNAME TOWNNAME            TOWNENG COUNTYID COUNTYCODE
+## 0    V02 10014020     臺東縣   成功鎮 Chenggong Township        V      10014
+## 1    T21 10013210     屏東縣   佳冬鄉   Jiadong Township        T      10013
+## 2    P13 10009130     雲林縣   麥寮鄉   Mailiao Township        P      10009
+## 3    V11 10014110     臺東縣   綠島鄉     Lvdao Township        V      10014
+## 4    V16 10014160     臺東縣   蘭嶼鄉     Lanyu Township        V      10014
+## 5    N07 10007120     彰化縣   田中鎮 Tianzhong Township        N      10007
+```
+
+---
+
+# Extract Data from SpatialPolygonsDataFrame
+
+
+```r
+taiwan %&gt;% length
+```
+
+```
+## [1] 368
+```
+
+
+```r
+slotNames(taiwan)
+```
+
+```
+## [1] "data"        "polygons"    "plotOrder"   "bbox"        "proj4string"
+```
+
+```r
+head(taiwan@data)
+```
+
+```
+##   TOWNID TOWNCODE COUNTYNAME TOWNNAME            TOWNENG COUNTYID COUNTYCODE
+## 0    V02 10014020     臺東縣   成功鎮 Chenggong Township        V      10014
+## 1    T21 10013210     屏東縣   佳冬鄉   Jiadong Township        T      10013
+## 2    P13 10009130     雲林縣   麥寮鄉   Mailiao Township        P      10009
+## 3    V11 10014110     臺東縣   綠島鄉     Lvdao Township        V      10014
+## 4    V16 10014160     臺東縣   蘭嶼鄉     Lanyu Township        V      10014
+## 5    N07 10007120     彰化縣   田中鎮 Tianzhong Township        N      10007
+```
+
+---
+
+# Union Polygons
+
+如果純粹只想要縣市層級的圖層
+
+
+```r
+unique(taiwan@data$COUNTYNAME)
+```
+
+```
+##  [1] "臺東縣" "屏東縣" "雲林縣" "彰化縣" "苗栗縣" "新竹縣" "臺中市" "嘉義縣"
+##  [9] "高雄市" "連江縣" "金門縣" "宜蘭縣" "南投縣" "花蓮縣" "澎湖縣" "基隆市"
+## [17] "新竹市" "臺北市" "新北市" "臺南市" "桃園市" "嘉義市"
+```
+
+---
+
+
+```r
+library(rgeos)
+countytaiwan&lt;- gUnaryUnion(taiwan,
+  taiwan@data$COUNTYNAME)
+plot(countytaiwan)
+```
+
+&lt;img src="content_files/figure-html/unnamed-chunk-9-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+---
+
+class: center, middle
+
+&lt;font size= "10"&gt;
+
+**Social Network Analysis**
+
+---
+
+
+#Network Example: Karate Network
+
+```r
+library(igraph)
+karate &lt;- make_graph("Zachary")
+karate
+```
+
+```
+## IGRAPH 0f39c30 U--- 34 78 -- Zachary
+## + attr: name (g/c)
+## + edges from 0f39c30:
+##  [1]  1-- 2  1-- 3  1-- 4  1-- 5  1-- 6  1-- 7  1-- 8  1-- 9  1--11  1--12
+## [11]  1--13  1--14  1--18  1--20  1--22  1--32  2-- 3  2-- 4  2-- 8  2--14
+## [21]  2--18  2--20  2--22  2--31  3-- 4  3-- 8  3--28  3--29  3--33  3--10
+## [31]  3-- 9  3--14  4-- 8  4--13  4--14  5-- 7  5--11  6-- 7  6--11  6--17
+## [41]  7--17  9--31  9--33  9--34 10--34 14--34 15--33 15--34 16--33 16--34
+## [51] 19--33 19--34 20--34 21--33 21--34 23--33 23--34 24--26 24--28 24--33
+## [61] 24--34 24--30 25--26 25--28 25--32 26--32 27--30 27--34 28--34 29--32
+## [71] 29--34 30--33 30--34 31--33 31--34 32--33 32--34 33--34
+```
+
+---
+
+
+
+```r
+plot(karate)
+```
+
+&lt;img src="content_files/figure-html/unnamed-chunk-11-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Centrality Measures
+
+&lt;img src="./image/centrality.PNG" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+
+# Compute Centralities in the Graph
+
+
+```r
+dg=degree(karate)
+bt=betweenness(karate, v=V(karate), directed = FALSE)
+cl=closeness(karate, v=V(karate), "total")
+```
+
+# Plot Centrality in the Graph
+
+
+```r
+vd=c(rep(1.5,17),rep(-1.5,17))
+vlabel=expression(
+  V[1],V[2],V[3],V[4],V[5],V[6],V[7],V[8],V[9],V[10],
+  V[11],V[12],V[13],V[14],V[15],V[16],V[17],V[18],V[19],
+  V[20],V[21],V[22],V[23],V[24],V[25],V[26],V[27],V[28],
+  V[29],V[30],V[31],V[32],V[33],V[34])
+dg=degree(karate)
+drank=rank(-1*dg,ties.method="first")
+vc=rev(heat.colors(max(drank)))[drank]
+```
+
+---
+
+
+```r
+l=read.csv("./data/layoutkarate.csv") %&gt;% as.matrix()
+plot(karate, vertex.label=vlabel,
+vertex.label.dist=vd,layout=l)
+plot(karate, vertex.shape="circle",vertex.label=drank,
+  vertex.label.cex=1,edge.width=2,
+  vertex.color=vc,layout=l,add=T)
+```
+
+&lt;img src="content_files/figure-html/unnamed-chunk-15-1.png" width="504" style="display: block; margin: auto;" /&gt;
+
+---
+
+&lt;img src="./image/karatecentrality.PNG" width="80%" style="display: block; margin: auto;" /&gt;
+
+---
+
+class: center, middle
+
+&lt;font size= "10"&gt;
+
+**Database**
+
+---
+
+# Set Config File
+
+
+```r
+dbconfig=read.csv("../dbconfig/sql_config_twcc.txt",
+                  stringsAsFactors = FALSE)
+dbconfig$v1
+```
+
+```
+## [1] "ip"       "port"     "user"     "password" "dbname"
+```
+
+---
+
+# 建立資料庫連線
+
+
+```r
+library(RMySQL)
+con=dbConnect(MySQL(), dbname = dbconfig[5,2],
+    username = dbconfig[3,2], password = dbconfig[4,2],
+    host = dbconfig[1,2],port=as.numeric(dbconfig[2,2])
+    )
+dbListTables(con)
+```
+
+```
+## [1] "iduser"                  "iris"                   
+## [3] "iservice_project_info_v" "mtcars"                 
+## [5] "nchc_resource_log"       "testx"
+```
+
+# Read and Write table 
+
+```r
+mtcars=dbReadTable(con, "mtcars")
+dbWriteTable(con, "iris", iris, overwrite=T)
+```
+
+```
+## [1] TRUE
+```
+
+```r
+dbListTables(con)
+```
+
+```
+## [1] "iduser"                  "iris"                   
+## [3] "iservice_project_info_v" "mtcars"                 
+## [5] "nchc_resource_log"       "testx"
+```
+
+---
+
+# Deal with Chinese 
+
+```r
+iduser=dbReadTable(con, "iduser")
+iduser
+```
+
+```
+##   id name
+## 1  1   ??
+## 2  2   ??
+## 3  3   ??
+```
+
+---
+
+# set names big5
+
+```r
+dbSendQuery(con,'SET NAMES big5')
+```
+
+```
+## &lt;MySQLResult:71907760,0,9&gt;
+```
+
+```r
+dbSendQuery(con, "set character_set_database = 'big5'")
+```
+
+```
+## &lt;MySQLResult:71907760,0,10&gt;
+```
+
+```r
+iduser=dbReadTable(con, "iduser")
+iduser
+```
+
+```
+##   id name
+## 1  1 小明
+## 2  2 阿華
+## 3  3 大強
+```
+
+---
+
+# set names big5
+
+```r
+dbSendQuery(con, "set names big5")
+```
+
+```
+## &lt;MySQLResult:1936876918,0,12&gt;
+```
+
+```r
+dbSendQuery(con, "set character_set_database = 'big5'")
+```
+
+```
+## &lt;MySQLResult:1497041541,0,13&gt;
+```
+
+```r
+testdata=data.frame(id="3", name="大強")
+dbWriteTable(con, "iduser", testdata, append=T,
+             row.names=FALSE)
+```
+
+```
+## [1] TRUE
+```
+
+```r
+dbDisconnect(con)
+```
+
+```
+## [1] TRUE
+```
+
+---
+
+# 連接TWCC S3
+
+
+```r
+# 讀取key
+s3key=fread("../dbconfig/s3.txt", header = FALSE,
+               stringsAsFactors = FALSE)
+s3key[,1]
+```
+
+```
+##                       V1
+## 1:     AWS_ACCESS_KEY_ID
+## 2: AWS_SECRET_ACCESS_KEY
+```
+
+
+```r
+Sys.setenv("AWS_S3_ENDPOINT" = "s3.twcc.ai",
+  "AWS_ACCESS_KEY_ID" = s3key[1,2],
+  "AWS_SECRET_ACCESS_KEY" = s3key[2,2])
+```
+
+---
+
+
+```r
+library("aws.s3")
+bucketlist()
+```
+
+```
+##   c..tutorial....2020.09.08T11.30.18.180Z..
+## 1                                  tutorial
+## 2                  2020-09-08T11:30:18.180Z
+```
+
+```r
+get_bucket("tutorial")
+```
+
+```
+## Bucket: tutorial 
+## 
+## $Contents
+## Key:            iris.csv 
+## LastModified:   2020-09-08T11:30:35.548Z 
+## ETag:           "395d6abd001abf3760a1a794ef4c453c" 
+## Size (B):       4177 
+## Owner:          GOV109018-y00tai00 
+## Storage class:  STANDARD
+```
+
+---
+
+# Read data from s3 bucket
+
+
+```r
+s3_iris=s3read_using(FUN = read.csv, 
+                     object = "s3://tutorial/iris.csv")
+head(s3_iris)
+```
+
+```
+##   Sepal.Length Sepal.Width Petal.Length Petal.Width Species
+## 1          5.1         3.5          1.4         0.2  setosa
+## 2          4.9         3.0          1.4         0.2  setosa
+## 3          4.7         3.2          1.3         0.2  setosa
+## 4          4.6         3.1          1.5         0.2  setosa
+## 5          5.0         3.6          1.4         0.2  setosa
+## 6          5.4         3.9          1.7         0.4  setosa
+```
+
+---
+
+class: center, middle
+
+&lt;font size= "10"&gt;
+
+**opencpu**
+
+---
+
+# plumber example
+
+
+```r
+ocpu_start_server()
+```
+
+---
+
+class: center, middle
+
+&lt;font size= "10"&gt;
+
+**plumber**
+
+---
+
+# plumber example
+
+- Create plumber api in RStudio
+- 執行plumber環境如下
+
+
+```r
+library(plumber)
+pr &lt;- plumber::plumb("./tkutest/plumber.R")
+pr$run()
+```
+
+---
+
+# 加入收集log的機制
+
+設定存放log的目錄
+
+```r
+# logging
+library(logger)
+
+# Specify how logs are written
+log_dir &lt;- "logs"
+if (!fs::dir_exists(log_dir)) fs::dir_create(log_dir)
+log_appender(appender_tee(tempfile("plumber_", log_dir, ".log")))
+```
+
+設定空值處理
+
+```r
+convert_empty &lt;- function(string) {
+  if (string == "") {
+    "-"
+  } else {
+    string
+  }
+}
+```
+
+---
+
+# 設定log的輸出格式
+
+
+```r
+pr &lt;- plumber::plumb("./tkutest/plumber.R")
+pr$registerHooks(
+  list(
+    preroute = function() {
+      # Start timer for log info
+      tictoc::tic()
+    },
+    postroute = function(req, res) {
+      end &lt;- tictoc::toc(quiet = TRUE)
+      # Log details about the request and the response
+      # TODO: Sanitize log details - perhaps in convert_empty
+      log_info('{convert_empty(req$REMOTE_ADDR)} "{convert_empty(req$HTTP_USER_AGENT)}" {convert_empty(req$HTTP_HOST)} {convert_empty(req$REQUEST_METHOD)} {convert_empty(req$PATH_INFO)} {convert_empty(res$status)} {round(end$toc - end$tic, digits = getOption("digits", 5))}')
+    }
+  )
+)
+```
+
+再次執行
+
+```r
+pr$run()
+```
+
+---
+
+&lt;center&gt;  &lt;font size="8"&gt;
+Thanks for your attention. &lt;/font&gt;&lt;/center&gt;
+&lt;center&gt;  &lt;font size="6"&gt;
+Welcome for your comments and suggestions.
+&lt;/font&gt;&lt;/center&gt;
+&lt;br&gt;&lt;br&gt;
+&lt;br&gt;&lt;br&gt;
+&lt;br&gt;&lt;br&gt;
+&lt;br&gt;&lt;br&gt;
+__Tai-Chi Wang__  
+
+Assistant Research Fellow  
+National Center for High-performance Computing,  
+National Applied Research Laboratories, Taiwan   
+Email: taichi@narlabs.org.tw  
+Webpage: [https://taichi43.wordpress.com/](https://taichi43.wordpress.com/)
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

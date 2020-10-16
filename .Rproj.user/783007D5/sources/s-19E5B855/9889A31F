@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1602811513392.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "9889A31F",
+    "lastKnownWriteTime" : 1602813298,
+    "last_content_update" : 1602813298521,
+    "path" : "D:/Git/TKUtalk/schedule_arg.r",
+    "project_path" : "schedule_arg.r",
+    "properties" : {
+        "cursorPosition" : "6,8",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 6,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

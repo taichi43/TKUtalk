@@ -1,0 +1,1 @@
+R CMD BATCH "--args n=10 m=10 s=5" D:\Git\TKUtalk\schedule_arg.r  

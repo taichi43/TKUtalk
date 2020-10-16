@@ -1,0 +1,3 @@
+"0","dg=degree(karate)"
+"0","bt=betweenness(karate, v=V(karate), directed = FALSE)"
+"0","cl=closeness(karate, v=V(karate), ""total"")"

@@ -1,0 +1,2 @@
+"0","knitr::opts_chunk$set(fig.align=""center"", message = FALSE)"
+"0","knitr::opts_chunk$set(fig.retina = 3, warning = FALSE, message = FALSE, fig.height=5)"

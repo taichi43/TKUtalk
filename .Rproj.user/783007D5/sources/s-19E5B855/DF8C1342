@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1602811260431.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1906040920",
+    "id" : "DF8C1342",
+    "lastKnownWriteTime" : 1602811405,
+    "last_content_update" : 1602811405889,
+    "path" : "D:/Git/TKUtalk/schedule_test.bat",
+    "project_path" : "schedule_test.bat",
+    "properties" : {
+        "cursorPosition" : "0,42",
+        "scrollLine" : "0",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 5,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "text"
+}

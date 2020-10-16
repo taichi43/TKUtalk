@@ -1,0 +1,116 @@
+---
+title: "S3 test"
+author: "Taichi Wang"
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+    number_sections: true
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.align="center", message = FALSE)
+knitr::opts_chunk$set( warning = FALSE, message = FALSE)
+```
+
+<img src="nchc_logo_en.png"  width="20%" style="position:absolute;top:20px;left:20px;" />
+<img src="transnchc.png"  width="10%" style="position:absolute;top:20px;right:20px;" />
+
+#Set S3 env
+
+```{r}
+Sys.setenv("AWS_S3_ENDPOINT" = "s3.twcc.ai",
+  "AWS_ACCESS_KEY_ID" = "2K8I3IS82366DWE5UP21",
+  "AWS_SECRET_ACCESS_KEY" = "gWB1S1JcwYo9thq8uS36qQtOfD1igiiKxcuIwi86")
+```
+
+```{r}
+library("aws.s3")
+bucketlist()
+```
+# get bucket
+```{r}
+dd=get_bucket(
+  bucket = 'taichis3test'
+)
+```
+
+# directly read s3 object
+
+```{r}
+testdata=aws.s3::s3read_using(fread, object = "s3://taichis3test/datatill108.csv", encoding="UTF-8")
+testdata %>% head
+```
+
+
+# airline data 
+
+## unzip
+```{r}
+library(R.utils)
+for(year in 1988:2008 ) bunzip2(paste0("./data/", year, ".csv.bz2"))
+```
+
+
+## put folder
+```{r}
+put_folder("airline", bucket = "taichis3test")
+```
+
+## put local file to s3
+
+```{r}
+airfiles=list.files("./data/", full.names = T)
+Sys.time()
+for(i in 1:length(airfiles)) 
+  put_object(airfiles[i],"data/test","taichis3test", multipart = TRUE)
+Sys.time()
+```
+
+## read https data
+```{r}
+library(data.table)
+tt=fread("https://taichis3test.s3.twcc.ai/temptest.csv")
+```
+```{r}
+library(dplyr)
+bucket="taichis3test"
+testdata=aws.s3::s3read_using(fread, encoding="UTF-8",
+    object = "data/variable-descriptions.csv", bucket = bucket)
+testdata %>% head
+```
+
+```{r}
+save_object("data/1987.csv", file = "temp.csv",bucket = bucket)
+```
+
+```{r}
+temp=fread("temp.csv")
+head(temp)
+names(temp)
+```
+
+# Analysis
+
+## data summary
+```{r}
+library(dplyr)
+res=group_by(temp, Month, Origin, Dest) %>% 
+  summarise(count=n(), sum_arrdelay=sum(ArrDelay>30, na.rm = T),
+            sum_depdelay=sum(DepDelay>30, na.rm = T),
+            mean_arrdelay=mean(ArrDelay>30, na.rm = T),
+            mean_depdelay=mean(DepDelay>30, na.rm = T))
+```
+
+
+
+# Results
+
+
+
+# Reference
+
+
+# Appendix

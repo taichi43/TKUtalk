@@ -1,0 +1,174 @@
+---
+title: "noflyzone"
+author: "Taichi"
+date: "2019年6月7日"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## read data
+```{r}
+# read xlsx must use 32bit version
+library(data.table)
+library(dplyr)
+Sys.setenv('JAVA_HOME' = 'C:/Program Files (x86)/Java/jre1.8.0_231') 
+library(rJava)
+library(xlsx)
+aa=read.xlsx("./1081119禁航區格式-新.xlsx", sheetIndex=1, encoding="UTF-8",
+             stringsAsFactors=FALSE)
+aa=dplyr::filter(aa, !is.na(aa$sd))
+```
+
+## deal with time
+```{r}
+aa$sd=as.Date(aa$sd-25569, origin="1970-01-01")
+aa$ed=as.Date(aa$ed-25569, origin="1970-01-01")
+```
+
+##bind x and circle
+```{r}
+x=aa$x
+x[is.na(aa$x)]=aa$圓形中心點[!is.na(aa$圓形中心點)]
+aa$x=x
+```
+
+## detect ocean
+```{r}
+oceans=c("渤海","黃海","東海","南海")
+oceanscol=list()
+for(i in 1:length(oceans))
+{
+  temp=rep(0, nrow(aa))
+  temp[grep(oceans[i], x)]=1
+  oceanscol[[i]]=temp
+}
+oceanscol=oceanscol %>% as.data.frame()
+```
+
+## deal with latlng
+```{r}
+library(stringr)
+lonlat=str_extract_all(aa$x,"[0-9|[:punct:]|A-Z]") %>%
+  lapply(.,function(x)paste(x,collapse=""))
+```
+
+```{r}
+comlatlng=function(x)
+{
+  x=as.numeric(x)
+  if(length(x)==2) res=x[1]+x[2]/60 else res=x[1]+x[2]/60+x[3]/3600
+  return(res)
+}
+
+textlatlng=function(x){
+  x=str_extract_all(x,"[0-9|[:punct:]|A-Z]") %>%
+    lapply(.,function(x)paste(x,collapse=""))
+  latlng=gsub("、",";",x[[1]]) %>% gsub("\\(|\\)|N|E|。","",.) %>% strsplit(.,";|； |/") %>%
+    unlist() %>% strsplit(.,"-") %>% lapply(.,comlatlng) %>%  unlist() %>%
+    matrix(.,ncol=2, byrow = T) %>% as.data.frame()
+  names(latlng)=c("lat","lng")
+  if(nrow(latlng)!=1) latlng=rbind(latlng, latlng[1,])
+  return(latlng)
+}
+```
+
+```{r}
+latlngall=c()
+for(i in 1:nrow(aa))
+{
+  if(is.na(aa$x[i])) latlngall[i] =NA else{
+    latlng = textlatlng(aa$x[i])
+    latlngall[i]=jsonlite::toJSON(latlng, pretty = FALSE,
+          na="null",auto_unbox  = T) %>% gsub("\"","",.)
+  }
+}
+aa$latlng=latlngall
+```
+
+## type mapping
+```{r}
+library(plyr)
+type=plyr::mapvalues(aa$type, from = c("多邊形","圓形"), to=c("p","c"))
+aa$type=type
+```
+
+##radius
+```{r}
+library(tidyr)
+radius=extract_numeric(aa$radius)
+radius[grep("海浬",aa$radius)]=radius[grep("海浬",aa$radius)]*1.852
+aa$radius=radius
+```
+
+## combind upload data
+```{r}
+aa$'渤海'=oceanscol[,1]
+aa$'黃海'=oceanscol[,2]
+aa$'東海'=oceanscol[,3]
+aa$'南海'=oceanscol[,4]
+```
+
+```{r}
+library(dplyr)
+names(aa)[4]="time"
+names(aa)[11]="mission"
+uploaddata=aa[,c("content","mission", "sd", "ed", "type", "x", "radius", "source",
+                  "time", "latlng", "渤海", "黃海", "東海", "南海")]
+```
+
+
+```{r}
+write.csv(aa,file="./noflyzone20191212.csv",row.names = F)
+```
+
+#to SQL
+
+```{r}
+library(data.table)
+localnofly=fread("./noflyzone20191212.csv", encoding = "UTF-8", data.table = F)
+```
+
+```{r}
+library(RMySQL)
+con=dbConnect(MySQL(), user="taichi", password="taichi",
+              host="140.110.27.184", dbname="public_news")
+dbSendQuery(con, "set names big5")
+dbSendQuery(con, "set character_set_database = 'big5'")
+nofly=dbReadTable(con, name="no_fly_zone_v2")
+dbDisconnect(con)
+
+con=dbConnect(MySQL(), user="taichi", password="taichi",
+              host="140.110.27.184", dbname="public_news")
+dbSendQuery(con, "set names big5")
+dbSendQuery(con, "set character_set_database = 'big5'")
+# for(i in 2:nrow(uploaddata)){
+# query=paste0("Update no_fly_zone_v2 Set mission = '", 
+#              uploaddata$mission[i],
+#              "' where aid = ", i+46)
+# dbSendQuery(con,query)
+# }
+dbWriteTable(con, name="no_fly_zone_v2", value=uploaddata,
+             append=T, row.names=FALSE)
+dbDisconnect(con)
+```
+
+# update
+```{r}
+names(localnofly)[11]="mission"
+
+library(RMySQL)
+con=dbConnect(MySQL(), user="taichi", password="taichi",
+              host="140.110.27.184", dbname="public_news")
+dbSendQuery(con, "set names big5")
+dbSendQuery(con, "set character_set_database = 'big5'")
+for(i in 1:nrow(localnofly)){
+  query=paste0("Update no_fly_zone_v2 Set mission = '",
+               localnofly$mission[i],
+               "' where aid = ", i+46)
+  dbSendQuery(con,query)
+}
+dbDisconnect(con)
+```

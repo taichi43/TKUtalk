@@ -1,0 +1,4 @@
+"0","# 讀取key"
+"0","s3key=fread(""../dbconfig/s3.txt"", header = FALSE,"
+"0","               stringsAsFactors = FALSE)"
+"0","s3key[,1]"

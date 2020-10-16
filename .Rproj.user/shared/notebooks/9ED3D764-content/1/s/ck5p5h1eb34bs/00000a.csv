@@ -1,0 +1,3 @@
+"0","l=read.csv(""./data/layoutkarate.csv"") %>% as.matrix()"
+"0","plot(karate, vertex.label=vlabel,"
+"0","vertex.label.dist=vd,layout=l)"

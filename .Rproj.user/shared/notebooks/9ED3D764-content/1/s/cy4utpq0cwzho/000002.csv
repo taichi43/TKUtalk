@@ -1,0 +1,5 @@
+"0","library(maptools)"
+"0","library(rgeos)"
+"0","taiwan <- readShapeSpatial("
+"0","  ""./data/taiwantownshp/TOWN_MOI_1060831.shp"" , "
+"0","  proj4string = CRS(""+proj=longlat +datum=WGS84""))"

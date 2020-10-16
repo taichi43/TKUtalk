@@ -1,0 +1,112 @@
+---
+title: "summary fo text data"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Read data from SQL
+
+```{r}
+library(data.table)
+dbconfig_iservice=fread("./sql_config_iservice.txt",data.table = F)
+dbconfig_twcc=fread("./sql_config_twcc.txt",data.table = F)
+```
+
+```{r}
+library(RMySQL)
+connect_iservice = dbConnect(MySQL(), dbname = dbconfig_iservice[5,2],
+                             username = dbconfig_iservice[3,2], 
+                    password = dbconfig_iservice[4,2],host = dbconfig_iservice[1,2],
+                    port=as.numeric(dbconfig_iservice[2,2]))
+dbListTables(connect_iservice)
+```
+
+```{r}
+library(RMySQL)
+connect_twcc = dbConnect(MySQL(), dbname = "taichitest",
+                             username = dbconfig_twcc[3,2], 
+                    password = dbconfig_twcc[4,2],host = dbconfig_twcc[1,2],
+                    port=as.numeric(dbconfig_twcc[2,2]),AllowLoadLocalInfile = 'true'
+                    )
+dbListTables(connect_twcc)
+```
+
+## write iservice_project_info_v to twcc DB
+```{r}
+iservice_project_info_v=dbReadTable(connect_iservice, "iservice_project_info_v")
+for(i in c(6,9,10,14:20))
+{
+  iservice_project_info_v[,i]=iconv(iservice_project_info_v[,i], "UTF-8")
+}
+
+write.csv(iservice_project_info_v, file = "./iservice_project_info_v.csv",
+          fileEncoding = "UTF-8", row.names = FALSE)
+dbSendQuery(connect_twcc, "set names utf8")
+dbSendQuery(connect_twcc, "set character_set_database = 'utf8'")
+dbSendQuery(connect_twcc, "SET GLOBAL local_infile = true")
+
+dbWriteTable(connect_twcc,name = "iservice_project_info_v",
+             value = "./iservice_project_info_v.csv", append =TRUE, row.names = FALSE,
+             fileEncoding="UTF-8")
+```
+
+## find information from twcc table
+```{r}
+query_info="SELECT modify_time FROM iservice_project_info_v ORDER BY modify_time DESC LIMIT 1;"
+query_log="SELECT id FROM nchc_resource_log ORDER BY id DESC LIMIT 1"
+qres=dbSendQuery(connect_twcc, query_info)
+modify_time=dbFetch(qres, n=-1)
+qres=dbSendQuery(connect_twcc, query_log)
+id=dbFetch(qres, n=-1)
+```
+
+## deal with iservice table
+```{r}
+dbSendQuery(connect_iservice, "set names utf8")
+dbSendQuery(connect_iservice, "set character_set_database = 'utf8'")
+dbSendQuery(connect_iservice, "SET GLOBAL local_infile = true")
+
+query_info=paste0("SELECT * FROM iservice_project_info_v WHERE modify_time > '", 
+                  modify_time,"'")
+query_log=paste0("SELECT * FROM nchc_resource_log WHERE id > ",id)
+qres=dbSendQuery(connect_iservice, query_info)
+new_info=dbFetch(qres, n=-1)
+qres=dbSendQuery(connect_iservice, query_log)
+new_log=dbFetch(qres, n=-1)
+```
+
+# update data
+
+## new_info
+```{r}
+if(nrow(new_info)!=0){
+  for(i in c(6,9,10,14:20))
+  {
+    new_info[,i]=iconv(new_info[,i], "UTF-8")
+  }
+  write.csv(new_info, file = "./new_info.csv",
+            fileEncoding = "UTF-8", row.names = FALSE)
+  dbWriteTable(connect_twcc,name = "iservice_project_info_v",
+             value = "./new_info.csv", append =TRUE, row.names = FALSE,
+             fileEncoding="UTF-8")
+}
+```
+
+## new_log
+```{r}
+if(nrow(new_log)!=0){
+dbWriteTable(connect_twcc,name = "nchc_resource_log",
+           value = new_log, append =TRUE, row.names = FALSE,
+           fileEncoding="UTF-8")
+}
+```
+
+# disconnect
+```{r}
+dbDisconnect(connect_iservice)
+dbDisconnect(connect_twcc)
+```
+

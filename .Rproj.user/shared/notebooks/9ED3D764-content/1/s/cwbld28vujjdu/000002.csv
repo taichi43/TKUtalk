@@ -1,0 +1,5 @@
+"0","taiwan@data$COUNTYNAME=iconv("
+"0","  taiwan@data$COUNTYNAME,""UTF-8"")"
+"0","taiwan@data$TOWNNAME=iconv("
+"0"," taiwan@data$TOWNNAME,""UTF-8"")"
+"0","head(taiwan@data)"
